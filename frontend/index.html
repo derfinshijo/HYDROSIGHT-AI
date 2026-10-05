@@ -1,0 +1,75 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AquaGuard AI — MVP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:#07111f}.glass{background:rgba(14,29,49,.86);border:1px solid rgba(120,180,220,.14)}
+.accent{color:#55d7df}
+</style>
+</head>
+<body class="text-slate-100 min-h-screen">
+<header class="border-b border-white/10 bg-[#081525]">
+<div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+<div><div class="text-xs tracking-[.25em] text-cyan-300">ENVIRONMENTAL AI • ROBOTICS</div>
+<h1 class="text-3xl font-bold">AquaGuard AI</h1><p class="text-sm text-slate-400">Detect • Analyse • Guide • Act • Verify</p></div>
+<div id="status" class="text-xs px-3 py-2 rounded-full bg-slate-800">READY</div>
+</div></header>
+<main class="max-w-7xl mx-auto px-6 py-8">
+<div class="grid lg:grid-cols-[1fr_1.3fr] gap-6">
+<section class="glass rounded-2xl p-6">
+<h2 class="text-xl font-semibold">1. Upload water-body image</h2>
+<p class="text-sm text-slate-400 mt-2">Prototype baseline detects vegetation-like green regions.</p>
+<label class="mt-6 block border border-dashed border-cyan-400/30 rounded-2xl p-8 text-center cursor-pointer">
+<input id="file" type="file" accept="image/*" class="hidden">
+<div class="text-4xl">📷</div><div class="mt-3 font-medium">Choose an image</div>
+<div class="text-xs text-slate-500 mt-1">JPG, PNG, WEBP</div></label>
+<button id="analyzeBtn" disabled class="mt-5 w-full rounded-xl bg-cyan-400 text-slate-950 font-bold py-3 disabled:opacity-40">ANALYZE WATER BODY</button>
+<div id="inputWrap" class="hidden mt-6"><div class="text-xs text-slate-500 mb-2">INPUT</div><img id="input" class="rounded-xl w-full max-h-72 object-cover"></div>
+</section>
+
+<section class="glass rounded-2xl p-6">
+<h2 class="text-xl font-semibold">2. AI assessment</h2>
+<div id="empty" class="h-[430px] flex items-center justify-center text-center text-slate-500"><div><div class="text-5xl mb-4">🌊</div>Upload an image to generate the assessment.</div></div>
+<div id="results" class="hidden">
+<img id="overlay" class="rounded-xl w-full max-h-72 object-contain bg-black/20 mt-4">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+<div class="rounded-xl bg-white/5 p-4"><div class="text-xs text-slate-500">CLASS</div><div id="class" class="font-semibold text-sm mt-1"></div></div>
+<div class="rounded-xl bg-white/5 p-4"><div class="text-xs text-slate-500">COVERAGE</div><div id="coverage" class="font-semibold text-2xl accent mt-1"></div></div>
+<div class="rounded-xl bg-white/5 p-4"><div class="text-xs text-slate-500">DENSITY</div><div id="density" class="font-semibold mt-1"></div></div>
+<div class="rounded-xl bg-white/5 p-4"><div class="text-xs text-slate-500">TARGET</div><div id="target" class="font-semibold mt-1"></div></div>
+</div><div id="note" class="text-xs text-amber-300/80 mt-3"></div>
+</div></section>
+</div>
+
+<section id="lower" class="hidden mt-6 grid lg:grid-cols-3 gap-6">
+<div class="glass rounded-2xl p-6"><h3 class="font-semibold text-lg">3. Hotspot map</h3><div id="zones" class="grid grid-cols-3 gap-2 mt-5"></div><p class="text-xs text-slate-500 mt-4">Coverage + density → prototype priority.</p></div>
+<div class="glass rounded-2xl p-6"><h3 class="font-semibold text-lg">4. Guidance</h3>
+<div class="text-sm mt-4"><div class="text-xs text-slate-500">OBSERVED CONDITION</div><div id="condition" class="font-medium mt-1"></div>
+<div class="text-xs text-slate-500 mt-4">POTENTIAL CONCERNS</div><ul id="concerns" class="list-disc ml-5"></ul>
+<div class="text-xs text-slate-500 mt-4">SUGGESTED CATEGORY</div><div id="intervention" class="text-cyan-300 mt-1"></div>
+<div id="safeguard" class="text-xs text-amber-300/80 mt-4"></div></div></div>
+<div class="glass rounded-2xl p-6"><h3 class="font-semibold text-lg">5. Robot task</h3>
+<div class="mt-4 rounded-xl bg-[#07111f] p-5 border border-cyan-400/15"><div class="text-xs text-slate-500">TASK</div><div id="task" class="text-2xl font-bold accent mt-1"></div>
+<div class="grid grid-cols-2 gap-4 mt-5 text-sm"><div><span class="text-slate-500">Zone</span><div id="taskZone"></div></div><div><span class="text-slate-500">Priority</span><div id="taskPriority"></div></div><div><span class="text-slate-500">Action</span><div id="taskAction"></div></div><div><span class="text-slate-500">Mode</span><div id="taskMode"></div></div></div></div>
+<button id="dispatch" class="mt-4 w-full rounded-xl border border-cyan-400/30 py-3 text-cyan-300 hover:bg-cyan-400/10">SIMULATE ROBOT DISPATCH</button>
+<div id="robotStatus" class="text-xs text-slate-500 mt-3"></div></div>
+</section>
+<footer class="text-center text-xs text-slate-600 py-10">AquaGuard AI v0.1 • Prototype decision support • Field verification required</footer>
+</main>
+<script>
+const API="http://127.0.0.1:8000"; let selected=null, latest=null;
+const file=document.getElementById("file"), btn=document.getElementById("analyzeBtn");
+file.onchange=()=>{selected=file.files[0];if(!selected)return;document.getElementById("input").src=URL.createObjectURL(selected);document.getElementById("inputWrap").classList.remove("hidden");btn.disabled=false};
+btn.onclick=async()=>{if(!selected)return;document.getElementById("status").textContent="ANALYSING";let f=new FormData();f.append("file",selected);
+try{let r=await fetch(API+"/api/analyze",{method:"POST",body:f});if(!r.ok)throw Error(await r.text());latest=await r.json();render(latest);document.getElementById("status").textContent="ANALYSIS COMPLETE"}catch(e){console.error(e);alert("API unavailable. Start the FastAPI server first.")}};
+function render(d){
+document.getElementById("empty").classList.add("hidden");document.getElementById("results").classList.remove("hidden");document.getElementById("lower").classList.remove("hidden");
+document.getElementById("overlay").src=d.overlay_image;document.getElementById("class").textContent=d.detected_class;document.getElementById("coverage").textContent=d.coverage_percent+"%";document.getElementById("density").textContent=d.density;document.getElementById("target").textContent=d.target_zone+" • "+d.target_priority;document.getElementById("note").textContent=d.confidence_note;
+const z=document.getElementById("zones");z.innerHTML="";d.zones.forEach(x=>{let e=document.createElement("div");e.className="rounded-xl p-4 border "+(x.priority=="HIGH"?"border-red-400/40 bg-red-400/10":x.priority=="MEDIUM"?"border-amber-300/30 bg-amber-300/10":"border-slate-500/20 bg-white/5");e.innerHTML="<b>"+x.zone+"</b><div class='text-xs text-slate-400'>"+x.coverage_percent+"%</div><div class='text-[10px] mt-2'>"+x.priority+"</div>";z.appendChild(e)});
+let g=d.guidance;document.getElementById("condition").textContent=g.observed_condition;document.getElementById("concerns").innerHTML=g.potential_concerns.map(x=>"<li>"+x+"</li>").join("");document.getElementById("intervention").textContent=g.suggested_category;document.getElementById("safeguard").textContent=g.protocol_safeguard;
+let t=d.robot_task;document.getElementById("task").textContent=t.task_id;document.getElementById("taskZone").textContent=t.target_zone;document.getElementById("taskPriority").textContent=t.priority;document.getElementById("taskAction").textContent=t.action.replaceAll("_"," ");document.getElementById("taskMode").textContent=t.execution_mode.replaceAll("_"," ");document.getElementById("robotStatus").textContent="Status: "+t.status}
+document.getElementById("dispatch").onclick=()=>{if(latest)document.getElementById("robotStatus").textContent="✓ "+latest.robot_task.task_id+" dispatched (simulation). ESP32 integration next."};
+</script></body></html>
